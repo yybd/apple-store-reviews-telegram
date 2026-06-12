@@ -12,13 +12,18 @@ async function fetchDeveloperApps() {
     }
     
     const encodedTerm = encodeURIComponent(devTerm.trim()).replace(/%20/g, '+');
-    const url = `https://itunes.apple.com/search?term=${encodedTerm}&entity=macSoftware`;
+    const url = `https://itunes.apple.com/search?term=${encodedTerm}&entity=macSoftware&attribute=softwareDeveloper`;
     const response = await fetch(url);
     const data = await response.json();
     
     if (!data.results) return [];
     
-    return data.results.map(app => ({
+    const searchLower = devTerm.trim().toLowerCase();
+    const filteredResults = data.results.filter(app => {
+      return app.artistName && app.artistName.toLowerCase().includes(searchLower);
+    });
+    
+    return filteredResults.map(app => ({
       id: app.trackId,
       name: app.trackName,
       rating: app.averageUserRating || 0,

@@ -1,8 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     fetchConfig();
-    fetchReviews();
+    fetchApps();
     setupTestButton();
     setupSettingsModal();
+    setupReviewsModal();
 });
 
 async function fetchConfig() {
@@ -88,45 +89,121 @@ function setupTestButton() {
     });
 }
 
-async function fetchReviews() {
+async function fetchApps() {
     const loadingEl = document.getElementById('loading');
-    const gridEl = document.getElementById('reviews-grid');
+    const gridEl = document.getElementById('apps-grid');
     const emptyStateEl = document.getElementById('empty-state');
     const totalReviewsEl = document.getElementById('total-reviews');
 
     try {
-        const response = await fetch('/api/reviews');
-        if (!response.ok) throw new Error('Failed to fetch reviews');
+        const response = await fetch('/api/apps');
+        if (!response.ok) throw new Error('Failed to fetch apps');
         
-        const reviews = await response.json();
+        const apps = await response.json();
         
         loadingEl.classList.add('hidden');
         
-        if (reviews.length === 0) {
+        if (apps.length === 0) {
             emptyStateEl.classList.remove('hidden');
             totalReviewsEl.textContent = '0';
             return;
         }
 
-        totalReviewsEl.textContent = reviews.length.toLocaleString();
+        const totalReviews = apps.reduce((sum, app) => sum + app.ratingCount, 0);
+        totalReviewsEl.textContent = totalReviews.toLocaleString();
         
-        gridEl.innerHTML = ''; // Clear previous content
+        gridEl.innerHTML = '';
         
-        reviews.forEach((review, index) => {
-            const card = createReviewCard(review);
-            // Staggered animation
+        apps.forEach((app, index) => {
+            const card = document.createElement('div');
+            card.className = 'app-card fade-in';
             card.style.animationDelay = `${index * 50}ms`;
+            
+            const stars = '★'.repeat(Math.round(app.rating)) + '☆'.repeat(5 - Math.round(app.rating));
+            
+            card.innerHTML = `
+                <h3>${escapeHTML(app.name)}</h3>
+                <div class="app-stats">
+                    <div class="app-rating">
+                        <span class="stars">${stars}</span>
+                        <span>${app.rating.toFixed(1)}</span>
+                    </div>
+                    <span class="app-count">(${app.ratingCount.toLocaleString()} reviews)</span>
+                </div>
+                <button class="view-reviews-btn" data-id="${app.id}" data-name="${escapeHTML(app.name)}">View Reviews</button>
+            `;
+            
             gridEl.appendChild(card);
+        });
+        
+        document.querySelectorAll('.view-reviews-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                openReviewsModal(e.target.dataset.id, e.target.dataset.name);
+            });
         });
         
         gridEl.classList.remove('hidden');
 
     } catch (error) {
-        console.error('Error fetching reviews:', error);
-        loadingEl.innerHTML = `<p style="color: #ff5e5e;">Error loading reviews. Retrying soon...</p>`;
-        // Optional: auto-retry
-        setTimeout(fetchReviews, 10000);
+        console.error('Error fetching apps:', error);
+        loadingEl.innerHTML = `<p style="color: #ff5e5e;">Error loading apps. Retrying soon...</p>`;
+        setTimeout(fetchApps, 10000);
     }
+}
+
+async function openReviewsModal(appId, appName) {
+    const modal = document.getElementById('reviews-modal');
+    const titleEl = document.getElementById('reviews-modal-title');
+    const loadingEl = document.getElementById('reviews-modal-loading');
+    const emptyEl = document.getElementById('reviews-modal-empty');
+    const listEl = document.getElementById('reviews-modal-list');
+    
+    titleEl.textContent = `Reviews for ${appName}`;
+    listEl.innerHTML = '';
+    emptyEl.classList.add('hidden');
+    loadingEl.classList.remove('hidden');
+    modal.classList.remove('hidden');
+    
+    try {
+        const response = await fetch(`/api/reviews?appId=${appId}`);
+        if (!response.ok) throw new Error('Failed to fetch reviews');
+        
+        const reviews = await response.json();
+        loadingEl.classList.add('hidden');
+        
+        if (reviews.length === 0) {
+            emptyEl.classList.remove('hidden');
+            return;
+        }
+        
+        reviews.forEach((review, index) => {
+            const card = createReviewCard(review);
+            card.style.animationDelay = `${Math.min(index * 50, 500)}ms`;
+            listEl.appendChild(card);
+        });
+    } catch (error) {
+        console.error('Error fetching reviews:', error);
+        loadingEl.classList.add('hidden');
+        emptyEl.innerHTML = `<h3 style="color: #ff5e5e;">Error loading reviews</h3>`;
+        emptyEl.classList.remove('hidden');
+    }
+}
+
+function setupReviewsModal() {
+    const modal = document.getElementById('reviews-modal');
+    const closeBtn = document.getElementById('close-reviews-btn');
+    
+    if (!modal || !closeBtn) return;
+    
+    closeBtn.addEventListener('click', () => {
+        modal.classList.add('hidden');
+    });
+    
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.add('hidden');
+        }
+    });
 }
 
 function createReviewCard(review) {
@@ -163,7 +240,7 @@ function escapeHTML(str) {
 }
 
 // Poll for updates every 60 seconds
-setInterval(fetchReviews, 60000);
+setInterval(fetchApps, 60000);
 
 function setupSettingsModal() {
     const modal = document.getElementById('settings-modal');
@@ -232,8 +309,8 @@ function setupSettingsModal() {
                     statusEl.style.color = '#4ade80';
                 }
                 fetchConfig();
-                // We should also trigger fetchReviews in case developer name changed
-                fetchReviews();
+                // Trigger fetchApps to update grid if developer name changed
+                fetchApps();
                 
                 setTimeout(() => {
                     modal.classList.add('hidden');

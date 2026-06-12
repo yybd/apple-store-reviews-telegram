@@ -106,9 +106,30 @@ app.post('/api/send-apps-summary', async (req, res) => {
   }
 });
 
-// API endpoint to get all reviews, sorted by newest
+// API endpoint to get all apps
+app.get('/api/apps', async (req, res) => {
+  const { fetchDeveloperApps } = require('./scraper');
+  try {
+    const apps = await fetchDeveloperApps();
+    res.json(apps);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retrieve apps' });
+  }
+});
+
+// API endpoint to get reviews, sorted by newest, optionally filtered by appId
 app.get('/api/reviews', (req, res) => {
-  db.all('SELECT * FROM reviews ORDER BY updated_at DESC', [], (err, rows) => {
+  const { appId } = req.query;
+  let query = 'SELECT * FROM reviews';
+  let params = [];
+  
+  if (appId) {
+    query += ' WHERE app_id = ?';
+    params.push(appId);
+  }
+  query += ' ORDER BY updated_at DESC';
+
+  db.all(query, params, (err, rows) => {
     if (err) {
       console.error(err);
       res.status(500).json({ error: 'Failed to retrieve reviews' });
