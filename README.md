@@ -12,6 +12,7 @@ The dashboard supports two different modes for fetching reviews. You can choose 
 This method uses Apple's public iTunes Search and RSS feeds.
 - **Pros**: Very easy to set up. Requires only your Developer Name.
 - **Cons**: You must manually add each Store Region (e.g., US, UK, IL) you want to track. Unlisted/unpublished apps will not show up.
+- **⚠️ Warning**: Apple's public RSS feeds are unofficial and notoriously unreliable. They frequently block or return empty review data for massive apps (like TikTok, WhatsApp). For accurate, stable data, the **Private API** is highly recommended.
 - **Setup**: Just enter your exact App Store Developer Name and select the countries you want to track.
 
 ### 2. Private API (App Store Connect)
