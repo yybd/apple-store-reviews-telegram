@@ -367,6 +367,8 @@ function setupSettingsModal() {
 
     if (!modal || !settingsBtn) return;
 
+    let currentApiMode = 'public';
+
     settingsBtn.addEventListener('click', async () => {
         if (statusEl) {
             statusEl.textContent = 'Loading...';
@@ -381,8 +383,6 @@ function setupSettingsModal() {
         
         const tabTelegram = document.getElementById('tab-telegram');
         const contentTelegram = document.getElementById('content-telegram');
-        
-        let currentApiMode = 'public';
 
         if (tabPublic && tabPrivate && tabTelegram) {
             const tabs = [
