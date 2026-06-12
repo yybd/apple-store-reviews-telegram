@@ -1,6 +1,9 @@
 // Setup Auth and fetch wrapper
 let authHeader = localStorage.getItem('storeReviewsAuth') || null;
 
+// Active data-fetching mode ('public' RSS or 'private' ASC API), kept in sync by fetchConfig()
+let activeApiMode = 'public';
+
 async function customFetch(url, options = {}) {
     const headers = options.headers || {};
     if (authHeader) {
@@ -79,7 +82,9 @@ async function fetchConfig() {
     try {
         const response = await customFetch('/api/config', { cache: 'no-cache' });
         const config = await response.json();
-        
+
+        if (config.apiMode) activeApiMode = config.apiMode;
+
         const devNameEl = document.getElementById('developer-name-display');
         if (devNameEl && config.developerName) {
             devNameEl.textContent = `Tracking feedback for ${config.developerName}'s Apps`;
@@ -287,15 +292,25 @@ async function openReviewsModal(appId, appName) {
         loadingEl.classList.add('hidden');
         
         if (reviews.length === 0) {
+            // The RSS-limits note is only relevant in Public mode; in Private mode
+            // the data already comes from App Store Connect, so don't suggest it
+            const publicModeNote = activeApiMode === 'public'
+                ? `
+                        <br><br>
+                        <span style="font-size: 0.85rem; opacity: 0.8;">
+                            <i>Note: Apple's Public RSS feeds only include <b>written</b> reviews (star-only ratings never appear), and for massive apps (like TikTok, WhatsApp) they often return empty data due to API limits. If this is your app, configure the <b>Private API</b> in Settings to bypass this limitation.</i>
+                        </span>`
+                : `
+                        <br><br>
+                        <span style="font-size: 0.85rem; opacity: 0.8;">
+                            <i>Note: Only <b>written</b> reviews are collected (star-only ratings have no text). New reviews will appear after the next scheduled check.</i>
+                        </span>`;
+
             emptyEl.innerHTML = `
                 <div style="text-align: center;">
                     <h3 style="margin-bottom: 8px;">No reviews found</h3>
                     <p style="color: var(--text-secondary); max-width: 400px; margin: 0 auto;">
-                        There are no saved reviews for this app yet. 
-                        <br><br>
-                        <span style="font-size: 0.85rem; opacity: 0.8;">
-                            <i>Note: For massive apps (like TikTok, WhatsApp), Apple's Public RSS feeds often return empty data due to API limits. If this is your app, configure the <b>Private API</b> in Settings to bypass this limitation.</i>
-                        </span>
+                        There are no saved reviews for this app yet.${publicModeNote}
                     </p>
                 </div>
             `;

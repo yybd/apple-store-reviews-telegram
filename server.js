@@ -112,7 +112,8 @@ app.get('/api/config', async (req, res) => {
       developerName: developerName || '',
       connected: apps.length > 0,
       appsCount: apps.length,
-      telegramConnected: isBotConnected()
+      telegramConnected: isBotConnected(),
+      apiMode: await db.getSetting('api_mode') || 'public'
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch developer config', connected: false, telegramConnected: false });

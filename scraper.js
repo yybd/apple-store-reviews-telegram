@@ -342,15 +342,24 @@ async function fetchDeveloperAppsPublic(devTerm, storeCountries) {
     return Array.from(appsMap.values());
 }
 
-// Fetch reviews for a specific app from the public RSS feed
+// Fetch reviews for a specific app from the public RSS feed.
+// Note: the feed only contains WRITTEN reviews — star-only ratings never appear
+// in it, and for massive apps Apple returns an empty feed in every format.
 async function fetchAppReviews(appId, storeCountry) {
     try {
         const url = `https://itunes.apple.com/${storeCountry}/rss/customerreviews/id=${appId}/sortBy=mostRecent/json`;
         const response = await fetch(url);
+        if (!response.ok) {
+            console.error(`RSS feed request failed for app ${appId} [${storeCountry}]: ${response.status} ${response.statusText}`);
+            return [];
+        }
         const data = await response.json();
 
-        // The RSS feed structure
-        const entries = data?.feed?.entry || [];
+        // Apple's XML->JSON conversion returns a single OBJECT (not an array)
+        // when there is exactly one written review — normalize so that lone
+        // review isn't silently dropped by the .filter() below
+        const rawEntries = data?.feed?.entry;
+        const entries = Array.isArray(rawEntries) ? rawEntries : (rawEntries ? [rawEntries] : []);
 
         // Skip the app-info entry (iTunes sometimes returns the app itself as the first entry),
         // and guard each field so one malformed entry doesn't drop the whole batch.
@@ -444,4 +453,4 @@ async function doScrape(isInitial) {
     }
 }
 
-module.exports = { scrapeReviews, resetAndRescrape, fetchDeveloperApps, testAscCredentials };
+module.exports = { scrapeReviews, resetAndRescrape, fetchDeveloperApps, fetchAppReviews, testAscCredentials };
