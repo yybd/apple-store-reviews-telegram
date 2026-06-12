@@ -201,9 +201,8 @@ app.get('/api/reviews', (req, res) => {
   });
 });
 
-// Initial scrape on startup
 setTimeout(() => {
-  scrapeReviews();
+  scrapeReviews(true);
 }, 2000); // Wait 2s to ensure DB is initialized
 
 // Setup polling interval
