@@ -100,6 +100,32 @@ header {
 .stats {
     display: flex;
     gap: 16px;
+    align-items: center;
+}
+
+.action-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 14px 20px;
+    border-radius: 14px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 4px 12px var(--accent-glow);
+    font-family: inherit;
+    height: fit-content;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px var(--accent-glow);
+    filter: brightness(1.1);
+}
+
+.action-btn:active {
+    transform: translateY(0);
 }
 
 .stat-box {

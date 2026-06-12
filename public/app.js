@@ -1,6 +1,36 @@
 document.addEventListener('DOMContentLoaded', () => {
     fetchReviews();
+    setupTestButton();
 });
+
+function setupTestButton() {
+    const testBtn = document.getElementById('test-telegram-btn');
+    if (!testBtn) return;
+    
+    testBtn.addEventListener('click', async () => {
+        const originalText = testBtn.textContent;
+        testBtn.textContent = 'Sending...';
+        testBtn.disabled = true;
+        testBtn.style.opacity = '0.7';
+        
+        try {
+            const res = await fetch('/api/test-telegram', { method: 'POST' });
+            if (res.ok) {
+                testBtn.textContent = 'Sent! ✅';
+            } else {
+                testBtn.textContent = 'Failed ❌';
+            }
+        } catch (error) {
+            testBtn.textContent = 'Error ❌';
+        }
+        
+        setTimeout(() => {
+            testBtn.textContent = originalText;
+            testBtn.disabled = false;
+            testBtn.style.opacity = '1';
+        }, 3000);
+    });
+}
 
 async function fetchReviews() {
     const loadingEl = document.getElementById('loading');

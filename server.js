@@ -16,6 +16,21 @@ app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
+// Test Telegram notification
+app.post('/api/test-telegram', async (req, res) => {
+  const { sendReviewNotification } = require('./telegram');
+  const testReview = {
+    id: 'test-123',
+    rating: 5,
+    title: 'Test Notification',
+    content: 'This is a test notification to verify your Telegram integration is working properly. 🎉',
+    author_name: 'System Test',
+    version: '1.0'
+  };
+  await sendReviewNotification(testReview, 'Test App');
+  res.json({ success: true, message: 'Test message triggered' });
+});
+
 // API endpoint to get all reviews, sorted by newest
 app.get('/api/reviews', (req, res) => {
   db.all('SELECT * FROM reviews ORDER BY updated_at DESC', [], (err, rows) => {
