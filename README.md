@@ -63,6 +63,8 @@ The project includes a sleek, modern web interface accessible from your browser 
 - **Apps Grid**: Displays a card for each of your apps, showing its icon, name, average rating, and total review count.
 - **Reviews Modal**: Click on any app to open a scrollable window containing all its saved reviews.
 - **In-Browser Settings**: A built-in Settings modal allows you to configure your APIs and Telegram Bot securely from the UI.
+- **Security & Authentication**: You can secure your dashboard with a custom username and password from the "Security" tab in the Settings. When enabled, a beautifully integrated Login Modal prevents unauthorized access to your dashboard and APIs.
+  - *Forgot your password?* Your credentials are saved securely in a local JSON file (`data/auth.json`) that is never tracked by Git. If you get locked out, you can access your server's terminal and run `cat data/auth.json` to view your current credentials, or simply run `rm data/auth.json` to delete the password requirement completely.
 
 ---
 
