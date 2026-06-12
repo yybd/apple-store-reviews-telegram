@@ -100,16 +100,25 @@ const initBot = async (token, chatId) => {
   }
 };
 
-const sendReviewNotification = async (review, appName, iconUrl) => {
+const getFlagEmoji = (countryCode) => {
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char =>  127397 + char.charCodeAt());
+  return String.fromCodePoint(...codePoints);
+};
+
+const sendReviewNotification = async (review, appName, iconUrl, countryCode) => {
   if (!bot || !activeChatId) return;
 
-  const message = `*New Review for ${appName}*
-
-Rating: ${review.rating}/5
-*${review.title}*
-by _${review.author_name}_ (v${review.version})
-
-${review.content}`;
+  const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+  const flag = countryCode ? `${getFlagEmoji(countryCode)} (${countryCode.toUpperCase()}) ` : '';
+  
+  let message = `*New Review for ${appName}*\n`;
+  message += `${flag}${stars}\n`;
+  message += `*Author:* ${review.author_name}\n`;
+  message += `*Version:* ${review.version}\n\n`;
+  message += `*${review.title}*\n${review.content}`;
 
   try {
     if (iconUrl) {

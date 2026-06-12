@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function fetchConfig() {
     try {
-        const response = await fetch('/api/config');
+        const response = await fetch('/api/config', { cache: 'no-cache' });
         const config = await response.json();
         
         const devNameEl = document.getElementById('developer-name-display');
@@ -96,7 +96,7 @@ async function fetchApps() {
     const totalReviewsEl = document.getElementById('total-reviews');
 
     try {
-        const response = await fetch('/api/apps');
+        const response = await fetch('/api/apps', { cache: 'no-cache' });
         if (!response.ok) throw new Error('Failed to fetch apps');
         
         const apps = await response.json();
@@ -168,7 +168,7 @@ async function openReviewsModal(appId, appName) {
     modal.classList.remove('hidden');
     
     try {
-        const response = await fetch(`/api/reviews?appId=${appId}`);
+        const response = await fetch(`/api/reviews?appId=${appId}`, { cache: 'no-cache' });
         if (!response.ok) throw new Error('Failed to fetch reviews');
         
         const reviews = await response.json();
@@ -209,6 +209,15 @@ function setupReviewsModal() {
     });
 }
 
+function getFlagEmoji(countryCode) {
+    if (!countryCode) return '';
+    const codePoints = countryCode
+        .toUpperCase()
+        .split('')
+        .map(char => 127397 + char.charCodeAt());
+    return String.fromCodePoint(...codePoints);
+}
+
 function createReviewCard(review) {
     const card = document.createElement('div');
     card.className = 'review-card fade-in';
@@ -226,7 +235,7 @@ function createReviewCard(review) {
         <h3 class="review-title">${escapeHTML(review.title)}</h3>
         <div class="review-content">${escapeHTML(review.content)}</div>
         <div class="review-footer">
-            <span class="review-author">${escapeHTML(review.author_name)}</span>
+            <span class="review-author">${escapeHTML(review.author_name)} ${getFlagEmoji(review.country) || ''}</span>
             <span class="review-version">v${escapeHTML(review.version)}</span>
         </div>
     `;
@@ -255,6 +264,75 @@ function setupSettingsModal() {
     const developerNameInput = document.getElementById('developer-name');
     const statusEl = document.getElementById('settings-save-status');
 
+    const addStoreBtn = document.getElementById('add-store-btn');
+    const container = document.getElementById('store-countries-container');
+
+    const countryOptions = `
+        <option value="us">United States (US)</option>
+        <option value="il">Israel (IL)</option>
+        <option value="gb">United Kingdom (GB)</option>
+        <option value="ca">Canada (CA)</option>
+        <option value="au">Australia (AU)</option>
+        <option value="de">Germany (DE)</option>
+        <option value="fr">France (FR)</option>
+        <option value="jp">Japan (JP)</option>
+        <option value="cn">China (CN)</option>
+        <option value="it">Italy (IT)</option>
+        <option value="es">Spain (ES)</option>
+        <option value="br">Brazil (BR)</option>
+        <option value="ru">Russia (RU)</option>
+        <option value="kr">South Korea (KR)</option>
+        <option value="nl">Netherlands (NL)</option>
+        <option value="se">Sweden (SE)</option>
+        <option value="ch">Switzerland (CH)</option>
+        <option value="mx">Mexico (MX)</option>
+        <option value="in">India (IN)</option>
+        <option value="za">South Africa (ZA)</option>
+        <option value="tr">Turkey (TR)</option>
+        <option value="ae">United Arab Emirates (AE)</option>
+    `;
+
+    function addStoreSelect(value = 'us') {
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.gap = '8px';
+        wrapper.style.alignItems = 'center';
+        
+        const select = document.createElement('select');
+        select.className = 'store-country-select';
+        select.style.flex = '1';
+        select.style.padding = '12px';
+        select.style.border = '1px solid var(--card-border)';
+        select.style.borderRadius = '8px';
+        select.style.fontSize = '1rem';
+        select.style.backgroundColor = 'var(--surface-color)';
+        select.style.color = 'var(--text-primary)';
+        select.innerHTML = countryOptions;
+        select.value = value;
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.style.background = 'none';
+        removeBtn.style.border = 'none';
+        removeBtn.style.color = 'var(--text-secondary)';
+        removeBtn.style.fontSize = '1.5rem';
+        removeBtn.style.cursor = 'pointer';
+        removeBtn.onclick = () => {
+            if (container.children.length > 1) {
+                wrapper.remove();
+            }
+        };
+        
+        wrapper.appendChild(select);
+        wrapper.appendChild(removeBtn);
+        container.appendChild(wrapper);
+    }
+
+    if (addStoreBtn) {
+        addStoreBtn.addEventListener('click', () => addStoreSelect());
+    }
+
     if (!modal || !settingsBtn) return;
 
     settingsBtn.addEventListener('click', async () => {
@@ -264,20 +342,28 @@ function setupSettingsModal() {
         }
         modal.classList.remove('hidden');
         
-try {
-            const res = await fetch('/api/settings');
+        try {
+            const res = await fetch('/api/settings', { cache: 'no-cache' });
             const data = await res.json();
             if (tokenInput) tokenInput.value = data.telegramToken || '';
             if (chatIdInput) chatIdInput.value = data.telegramChatId || '';
             if (developerNameInput) developerNameInput.value = data.developerName || '';
-            const countryInput = document.getElementById('store-country');
-            if (countryInput && data.storeCountry) countryInput.value = data.storeCountry;
+            
+            if (container) {
+                container.innerHTML = '';
+                if (data.storeCountries && data.storeCountries.length > 0) {
+                    data.storeCountries.forEach(c => addStoreSelect(c));
+                } else {
+                    addStoreSelect('us');
+                }
+            }
             if (statusEl) statusEl.textContent = '';
         } catch (e) {
             if (statusEl) {
                 statusEl.textContent = 'Error loading settings';
                 statusEl.style.color = '#ff5e5e';
             }
+            if (container && container.children.length === 0) addStoreSelect('us');
         }
     });
 
@@ -296,7 +382,8 @@ try {
         saveBtn.textContent = 'Saving...';
         if (statusEl) statusEl.textContent = '';
         
-        const countryInput = document.getElementById('store-country');
+        const countrySelects = Array.from(document.querySelectorAll('.store-country-select')).map(s => s.value);
+        const storeCountries = [...new Set(countrySelects)]; // remove duplicates
 
         try {
             const res = await fetch('/api/settings', {
@@ -306,7 +393,7 @@ try {
                     telegramToken: tokenInput ? tokenInput.value.trim() : '',
                     telegramChatId: chatIdInput ? chatIdInput.value.trim() : '',
                     developerName: developerNameInput ? developerNameInput.value.trim() : '',
-                    storeCountry: countryInput ? countryInput.value.trim() : 'us'
+                    storeCountries: storeCountries
                 })
             });
             

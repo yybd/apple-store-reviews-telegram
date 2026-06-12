@@ -21,8 +21,14 @@ const db = new sqlite3.Database(path.join(DB_DIR, 'reviews.sqlite'), (err) => {
       rating INTEGER,
       title TEXT,
       content TEXT,
-      updated_at TEXT
-    )`);
+      updated_at TEXT,
+      country TEXT
+    )`, (err) => {
+        if (!err) {
+            // Attempt to add country column to existing tables (fails silently if already exists)
+            db.run(`ALTER TABLE reviews ADD COLUMN country TEXT`, () => {});
+        }
+    });
     db.run(`CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT

@@ -11,25 +11,46 @@ async function fetchDeveloperApps() {
       return [];
     }
     
+    const storeCountryStr = await db.getSetting('store_country') || process.env.STORE_COUNTRY || 'us';
+    const storeCountries = storeCountryStr.split(',');
     const encodedTerm = encodeURIComponent(devTerm.trim()).replace(/%20/g, '+');
-    const url = `https://itunes.apple.com/search?term=${encodedTerm}&entity=macSoftware&attribute=softwareDeveloper`;
-    const response = await fetch(url);
-    const data = await response.json();
     
-    if (!data.results) return [];
+    const appsMap = new Map();
+
+    for (const storeCountry of storeCountries) {
+        try {
+            const url = `https://itunes.apple.com/search?term=${encodedTerm}&entity=macSoftware&attribute=softwareDeveloper&country=${storeCountry.trim()}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.results) {
+                const searchLower = devTerm.trim().toLowerCase();
+                const filteredResults = data.results.filter(app => {
+                    return app.artistName && app.artistName.toLowerCase().includes(searchLower);
+                });
+                
+                filteredResults.forEach(app => {
+                    const id = app.trackId.toString();
+                    if (!appsMap.has(id)) {
+                        appsMap.set(id, {
+                            id: id,
+                            name: app.trackName,
+                            rating: app.averageUserRating || 0,
+                            ratingCount: app.userRatingCount || 0,
+                            iconUrl: app.artworkUrl512 || app.artworkUrl100 || ''
+                        });
+                    } else {
+                        // Aggregate ratings if we want, or just keep the first found.
+                        // We will keep the first found metadata since reviews come from DB anyway.
+                    }
+                });
+            }
+        } catch (err) {
+            console.error(`Error fetching apps for country ${storeCountry}:`, err);
+        }
+    }
     
-    const searchLower = devTerm.trim().toLowerCase();
-    const filteredResults = data.results.filter(app => {
-      return app.artistName && app.artistName.toLowerCase().includes(searchLower);
-    });
-    
-    return filteredResults.map(app => ({
-      id: app.trackId.toString(),
-      name: app.trackName,
-      rating: app.averageUserRating || 0,
-      ratingCount: app.userRatingCount || 0,
-      iconUrl: app.artworkUrl512 || app.artworkUrl100 || ''
-    }));
+    return Array.from(appsMap.values());
   } catch (error) {
     console.error('Error fetching developer apps:', error);
     return [];
@@ -67,41 +88,44 @@ async function fetchAppReviews(appId, storeCountry) {
 async function scrapeReviews() {
   console.log('Starting review scrape cycle...');
   const apps = await fetchDeveloperApps();
-  const storeCountry = await db.getSetting('store_country') || process.env.STORE_COUNTRY || 'us';
-  console.log(`Found ${apps.length} apps for developer. Using store country: ${storeCountry}`);
+  const storeCountryStr = await db.getSetting('store_country') || process.env.STORE_COUNTRY || 'us';
+  const storeCountries = storeCountryStr.split(',').map(c => c.trim());
+  console.log(`Found ${apps.length} apps for developer. Using store countries: ${storeCountries.join(', ')}`);
 
   for (const app of apps) {
-    const reviews = await fetchAppReviews(app.id, storeCountry);
-    console.log(`Fetched ${reviews.length} reviews for ${app.name} (${app.id})`);
-    
-    for (const review of reviews) {
-      // Check if review exists
-      db.get('SELECT id FROM reviews WHERE id = ?', [review.id], async (err, row) => {
-        if (err) {
-          console.error('Database error:', err);
-          return;
-        }
-        
-        if (!row) {
-          // New review found
-          console.log(`New review found for ${app.name}: ${review.title}`);
+    for (const storeCountry of storeCountries) {
+      const reviews = await fetchAppReviews(app.id, storeCountry);
+      console.log(`Fetched ${reviews.length} reviews for ${app.name} (${app.id}) in ${storeCountry}`);
+      
+      for (const review of reviews) {
+        // Check if review exists
+        db.get('SELECT id FROM reviews WHERE id = ?', [review.id], async (err, row) => {
+          if (err) {
+            console.error('Database error:', err);
+            return;
+          }
           
-          // Insert into DB
-          db.run(
-            `INSERT INTO reviews (id, app_id, author_name, author_uri, version, rating, title, content, updated_at) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [review.id, app.id, review.author_name, review.author_uri, review.version, review.rating, review.title, review.content, review.updated_at],
-            (insertErr) => {
-              if (insertErr) {
-                console.error('Error inserting review:', insertErr);
-              } else {
-                // Send notification only if successfully saved to avoid spam
-                sendReviewNotification(review, app.name, app.iconUrl);
+          if (!row) {
+            // New review found
+            console.log(`New review found for ${app.name} [${storeCountry}]: ${review.title}`);
+            
+            // Insert into DB
+            db.run(
+              `INSERT INTO reviews (id, app_id, author_name, author_uri, version, rating, title, content, updated_at, country) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [review.id, app.id, review.author_name, review.author_uri, review.version, review.rating, review.title, review.content, review.updated_at, storeCountry],
+              (insertErr) => {
+                if (insertErr) {
+                  console.error('Error inserting review:', insertErr);
+                } else {
+                  // Send notification only if successfully saved to avoid spam
+                  sendReviewNotification(review, app.name, app.iconUrl, storeCountry);
+                }
               }
-            }
-          );
-        }
-      });
+            );
+          }
+        });
+      }
     }
   }
 }

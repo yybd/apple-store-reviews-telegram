@@ -53,28 +53,31 @@ app.get('/api/settings', async (req, res) => {
     const token = await db.getSetting('telegram_token') || process.env.TELEGRAM_BOT_TOKEN || '';
     const chatId = await db.getSetting('telegram_chat_id') || process.env.TELEGRAM_CHAT_ID || '';
     const developerName = await db.getSetting('developer_name') || process.env.DEVELOPER_TERM || '';
-    const storeCountry = await db.getSetting('store_country') || process.env.STORE_COUNTRY || 'us';
-    res.json({ telegramToken: token, telegramChatId: chatId, developerName, storeCountry });
+    const storeCountryStr = await db.getSetting('store_country') || process.env.STORE_COUNTRY || 'us';
+    const storeCountries = storeCountryStr.split(',');
+    res.json({ telegramToken: token, telegramChatId: chatId, developerName, storeCountries });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch settings' });
   }
 });
 
 app.post('/api/settings', async (req, res) => {
-  const { telegramToken, telegramChatId, developerName, storeCountry } = req.body;
+  const { telegramToken, telegramChatId, developerName, storeCountries } = req.body;
   try {
     const oldDevName = await db.getSetting('developer_name') || '';
     const oldStoreCountry = await db.getSetting('store_country') || 'us';
 
+    const storeCountryStr = Array.isArray(storeCountries) ? storeCountries.join(',') : 'us';
+
     await db.setSetting('telegram_token', telegramToken || '');
     await db.setSetting('telegram_chat_id', telegramChatId || '');
     await db.setSetting('developer_name', developerName || '');
-    await db.setSetting('store_country', storeCountry || 'us');
+    await db.setSetting('store_country', storeCountryStr);
     
     // Re-initialize bot
     await initBot(telegramToken, telegramChatId);
 
-    if (developerName !== oldDevName || storeCountry !== oldStoreCountry) {
+    if (developerName !== oldDevName || storeCountryStr !== oldStoreCountry) {
         // Clear reviews because the developer or country changed
         db.run('DELETE FROM reviews', (err) => {
             if (!err) {
