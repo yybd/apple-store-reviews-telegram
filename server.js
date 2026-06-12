@@ -75,6 +75,9 @@ app.post('/api/settings', async (req, res) => {
     const oldStoreCountry = await db.getSetting('store_country') || 'us';
     const oldApiMode = await db.getSetting('api_mode') || 'public';
 
+    const oldTelegramToken = await db.getSetting('telegram_token') || '';
+    const oldTelegramChatId = await db.getSetting('telegram_chat_id') || '';
+
     const storeCountryStr = Array.isArray(storeCountries) ? storeCountries.join(',') : 'us';
 
     await db.setSetting('telegram_token', telegramToken || '');
@@ -87,11 +90,25 @@ app.post('/api/settings', async (req, res) => {
     await db.setSetting('asc_key_id', ascKeyId || '');
     
     if (ascPrivateKey && ascPrivateKey !== '***HIDDEN***') {
-      await db.setSetting('asc_private_key', ascPrivateKey);
+      // Normalize the private key: replace literal \n strings with real newlines
+      // and ensure it starts/ends correctly
+      let normalizedKey = ascPrivateKey.replace(/\\n/g, '\n');
+      if (!normalizedKey.includes('\n')) {
+          // If the user pasted it as a single line without literal \n, try to reconstruct it
+          normalizedKey = normalizedKey.replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n');
+          normalizedKey = normalizedKey.replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----');
+          // Add line breaks every 64 characters for the body
+          const body = normalizedKey.replace('-----BEGIN PRIVATE KEY-----\n', '').replace('\n-----END PRIVATE KEY-----', '').replace(/\s+/g, '');
+          const chunked = body.match(/.{1,64}/g)?.join('\n') || body;
+          normalizedKey = `-----BEGIN PRIVATE KEY-----\n${chunked}\n-----END PRIVATE KEY-----`;
+      }
+      await db.setSetting('asc_private_key', normalizedKey);
     }
     
-    // Re-initialize bot
-    await initBot(telegramToken, telegramChatId);
+    // Re-initialize bot only if telegram credentials changed
+    if (telegramToken !== oldTelegramToken || telegramChatId !== oldTelegramChatId) {
+      await initBot(telegramToken, telegramChatId);
+    }
 
     if (developerName !== oldDevName || storeCountryStr !== oldStoreCountry || apiMode !== oldApiMode) {
         // Clear reviews because the developer, country or api mode changed
