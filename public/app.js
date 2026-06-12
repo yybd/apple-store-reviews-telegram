@@ -9,19 +9,19 @@ function setupTestButton() {
     
         testBtn.addEventListener('click', async () => {
         const originalText = testBtn.textContent;
-        testBtn.textContent = 'שולח...';
+        testBtn.textContent = 'Sending...';
         testBtn.disabled = true;
         testBtn.style.opacity = '0.7';
         
         try {
             const res = await fetch('/api/send-apps-summary', { method: 'POST' });
             if (res.ok) {
-                testBtn.textContent = 'נשלח בהצלחה! ✅';
+                testBtn.textContent = 'Sent! ✅';
             } else {
-                testBtn.textContent = 'שגיאה בשליחה ❌';
+                testBtn.textContent = 'Failed ❌';
             }
         } catch (error) {
-            testBtn.textContent = 'שגיאה ❌';
+            testBtn.textContent = 'Error ❌';
         }
         
         setTimeout(() => {
