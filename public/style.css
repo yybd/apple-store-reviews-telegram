@@ -573,3 +573,28 @@ header {
     border-radius: 999px;
     vertical-align: middle;
 }
+
+/* On/Off tag on the Telegram tab, mirroring the header's connection dot */
+.tab-status-badge {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 1px 6px;
+    border-radius: 999px;
+    vertical-align: middle;
+}
+
+.tab-status-badge.on {
+    color: #15803d;
+    background: rgba(74, 222, 128, 0.18);
+    border: 1px solid rgba(74, 222, 128, 0.4);
+}
+
+.tab-status-badge.off {
+    color: var(--text-secondary);
+    background: rgba(100, 116, 139, 0.12);
+    border: 1px solid rgba(100, 116, 139, 0.28);
+}

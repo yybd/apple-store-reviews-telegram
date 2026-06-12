@@ -4,6 +4,9 @@ let authHeader = localStorage.getItem('storeReviewsAuth') || null;
 // Active data-fetching mode ('public' RSS or 'private' ASC API), kept in sync by fetchConfig()
 let activeApiMode = 'public';
 
+// Whether the Telegram bot is currently connected, kept in sync by fetchConfig()
+let telegramEnabled = false;
+
 async function customFetch(url, options = {}) {
     const headers = options.headers || {};
     if (authHeader) {
@@ -108,6 +111,10 @@ async function fetchConfig() {
             modeBadgeEl.classList.remove('hidden', 'public', 'private');
             modeBadgeEl.classList.add(isPrivate ? 'private' : 'public');
         }
+
+        // Reflect Telegram's on/off state on its Settings tab
+        telegramEnabled = !!config.telegramConnected;
+        markTelegramTab(telegramEnabled);
 
         const statusEl = document.getElementById('connection-status');
         if (statusEl) {
@@ -525,6 +532,25 @@ function markActiveModeTab(savedMode) {
     });
 }
 
+// Show whether Telegram notifications are connected, right on the Telegram tab,
+// mirroring the green/red status dot in the header.
+function markTelegramTab(connected) {
+    const btn = document.getElementById('tab-telegram');
+    if (!btn) return;
+    let badge = btn.querySelector('.tab-status-badge');
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'tab-status-badge';
+        btn.appendChild(badge);
+    }
+    badge.textContent = connected ? 'On' : 'Off';
+    badge.classList.remove('on', 'off');
+    badge.classList.add(connected ? 'on' : 'off');
+    badge.title = connected
+        ? 'Telegram notifications are connected'
+        : 'Telegram is not configured';
+}
+
 function setupSettingsModal() {
     const modal = document.getElementById('settings-modal');
     const settingsBtn = document.getElementById('settings-btn');
@@ -683,6 +709,7 @@ function setupSettingsModal() {
                 if (tabPublic) tabPublic.click();
             }
             markActiveModeTab(data.apiMode);
+            markTelegramTab(telegramEnabled);
 
             if (container) {
                 container.innerHTML = '';
