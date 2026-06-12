@@ -146,12 +146,16 @@ app.get('/api/config', async (req, res) => {
     if (developerName === 'Your Developer Name') {
       developerName = '';
     }
+    const authData = readAuthFile();
+    const authEnabled = !!((authData && authData.user && authData.pass) ||
+      (process.env.DASHBOARD_USER && process.env.DASHBOARD_PASS));
     res.json({
       developerName: developerName || '',
       connected: apps.length > 0,
       appsCount: apps.length,
       telegramConnected: isBotConnected(),
-      apiMode: await db.getSetting('api_mode') || 'public'
+      apiMode: await db.getSetting('api_mode') || 'public',
+      authEnabled
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch developer config', connected: false, telegramConnected: false });

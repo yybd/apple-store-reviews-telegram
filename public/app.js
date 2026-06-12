@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchApps();
     connectEventStream();
     setupTestButton();
+    setupLogoutButton();
     setupSettingsModal();
     setupReviewsModal();
     
@@ -123,17 +124,56 @@ async function fetchConfig() {
                     testBtn.title = 'Telegram is not configured';
                 }
             }
-            
+
+            // Logged-in indicator + logout button (only when protection is enabled)
+            const logoutBtn = document.getElementById('logout-btn');
+            let loggedInUser = null;
+            if (config.authEnabled && authHeader) {
+                try {
+                    loggedInUser = atob(authHeader.split(' ')[1] || '').split(':')[0] || null;
+                } catch (e) {
+                    loggedInUser = null;
+                }
+            }
+            if (loggedInUser) {
+                statusHtml += `<span style="margin: 0 6px; color: #cbd5e1;">|</span>`;
+                statusHtml += `<span style="color: #4ade80;" title="Logged in">●</span> 👤 ${escapeHTML(loggedInUser)}`;
+                if (logoutBtn) {
+                    logoutBtn.classList.remove('hidden');
+                    logoutBtn.title = `Logged in as ${loggedInUser} — click to log out`;
+                }
+            } else if (logoutBtn) {
+                logoutBtn.classList.add('hidden');
+            }
+
             statusEl.innerHTML = statusHtml;
         }
     } catch (error) {
         console.error('Error fetching config:', error);
+        // Auth challenges are handled by the login modal — not a server failure
+        if (error.message === 'Authentication required') return;
         const statusEl = document.getElementById('connection-status');
         if (statusEl) {
             statusEl.classList.remove('hidden');
             statusEl.innerHTML = `<span style="color: #ff5e5e;">●</span> Failed to connect to server.`;
         }
     }
+}
+
+function setupLogoutButton() {
+    const btn = document.getElementById('logout-btn');
+    if (!btn) return;
+
+    btn.addEventListener('click', () => {
+        localStorage.removeItem('storeReviewsAuth');
+        authHeader = null;
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+        // Reload with no credentials: the server answers 401 and the login modal appears
+        location.reload();
+    });
 }
 
 function setupTestButton() {
