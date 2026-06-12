@@ -129,7 +129,7 @@ async function fetchApps() {
             const card = document.createElement('div');
             card.className = 'app-card fade-in';
             if (app.isPublished === false) {
-                card.style.filter = 'brightness(0.4) grayscale(0.8)';
+                card.style.filter = 'brightness(0.7) grayscale(0.8)';
                 card.style.backgroundColor = 'var(--bg-color)';
             }
             card.style.animationDelay = `${index * 50}ms`;
