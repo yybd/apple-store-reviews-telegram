@@ -31,18 +31,24 @@ async function fetchDeveloperApps() {
                 
                 filteredResults.forEach(app => {
                     const id = app.trackId.toString();
+                    const currentRating = app.averageUserRating || 0;
+                    const currentCount = app.userRatingCount || 0;
+                    
                     if (!appsMap.has(id)) {
                         appsMap.set(id, {
                             id: id,
                             name: app.trackName,
-                            rating: app.averageUserRating || 0,
-                            ratingCount: app.userRatingCount || 0,
-                            iconUrl: app.artworkUrl512 || app.artworkUrl100 || ''
+                            iconUrl: app.artworkUrl512 || app.artworkUrl100 || '',
+                            ratingsByCountry: []
                         });
-                    } else {
-                        // Aggregate ratings if we want, or just keep the first found.
-                        // We will keep the first found metadata since reviews come from DB anyway.
                     }
+                    
+                    const existing = appsMap.get(id);
+                    existing.ratingsByCountry.push({
+                        country: storeCountry,
+                        rating: currentRating,
+                        count: currentCount
+                    });
                 });
             }
         } catch (err) {

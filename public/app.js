@@ -109,7 +109,12 @@ async function fetchApps() {
             return;
         }
 
-        const totalReviews = apps.reduce((sum, app) => sum + app.ratingCount, 0);
+        const totalReviews = apps.reduce((sum, app) => {
+            if (app.ratingsByCountry) {
+                return sum + app.ratingsByCountry.reduce((cSum, r) => cSum + r.count, 0);
+            }
+            return sum + (app.ratingCount || 0);
+        }, 0);
         totalReviewsEl.textContent = totalReviews.toLocaleString();
         
         gridEl.innerHTML = '';
@@ -119,19 +124,33 @@ async function fetchApps() {
             card.className = 'app-card fade-in';
             card.style.animationDelay = `${index * 50}ms`;
             
-            const stars = '★'.repeat(Math.round(app.rating)) + '☆'.repeat(5 - Math.round(app.rating));
+            let statsHtml = '';
+            if (app.ratingsByCountry && app.ratingsByCountry.length > 0) {
+                app.ratingsByCountry.forEach(r => {
+                    const stars = '★'.repeat(Math.round(r.rating)) + '☆'.repeat(5 - Math.round(r.rating));
+                    const flag = getFlagEmoji(r.country);
+                    statsHtml += `
+                        <div class="app-stats" style="margin-bottom: 4px; font-size: 0.9rem;">
+                            <div class="app-rating" style="display: flex; align-items: center; gap: 6px;">
+                                <span>${flag} ${r.country.toUpperCase()}</span>
+                                <span class="stars">${stars}</span>
+                                <span>${r.rating.toFixed(1)}</span>
+                            </div>
+                            <span class="app-count" style="margin-left: auto;">(${r.count.toLocaleString()})</span>
+                        </div>
+                    `;
+                });
+            } else {
+                statsHtml = '<div style="color: var(--text-secondary); font-size: 0.9rem;">No ratings yet</div>';
+            }
             
             card.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px;">
                     ${app.iconUrl ? `<img src="${app.iconUrl}" alt="${escapeHTML(app.name)} icon" style="width: 56px; height: 56px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">` : ''}
                     <h3 style="margin: 0;">${escapeHTML(app.name)}</h3>
                 </div>
-                <div class="app-stats">
-                    <div class="app-rating">
-                        <span class="stars">${stars}</span>
-                        <span>${app.rating.toFixed(1)}</span>
-                    </div>
-                    <span class="app-count">(${app.ratingCount.toLocaleString()} reviews)</span>
+                <div style="margin-bottom: 12px; border-top: 1px solid var(--card-border); padding-top: 8px;">
+                    ${statsHtml}
                 </div>
                 <button class="view-reviews-btn" data-id="${app.id}" data-name="${escapeHTML(app.name)}">View Reviews</button>
             `;
@@ -383,7 +402,17 @@ function setupSettingsModal() {
         if (statusEl) statusEl.textContent = '';
         
         const countrySelects = Array.from(document.querySelectorAll('.store-country-select')).map(s => s.value);
-        const storeCountries = [...new Set(countrySelects)]; // remove duplicates
+        const storeCountries = [...new Set(countrySelects)];
+        
+        if (storeCountries.length !== countrySelects.length) {
+            if (statusEl) {
+                statusEl.textContent = 'Please do not select the same App Store region more than once.';
+                statusEl.style.color = '#ff5e5e';
+            }
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save';
+            return;
+        }
 
         try {
             const res = await fetch('/api/settings', {
