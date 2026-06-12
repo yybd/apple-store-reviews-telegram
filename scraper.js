@@ -27,7 +27,8 @@ async function fetchDeveloperApps() {
       id: app.trackId,
       name: app.trackName,
       rating: app.averageUserRating || 0,
-      ratingCount: app.userRatingCount || 0
+      ratingCount: app.userRatingCount || 0,
+      iconUrl: app.artworkUrl512 || app.artworkUrl100 || ''
     }));
   } catch (error) {
     console.error('Error fetching developer apps:', error);
@@ -94,7 +95,7 @@ async function scrapeReviews() {
                 console.error('Error inserting review:', insertErr);
               } else {
                 // Send notification only if successfully saved to avoid spam
-                sendReviewNotification(review, app.name);
+                sendReviewNotification(review, app.name, app.iconUrl);
               }
             }
           );

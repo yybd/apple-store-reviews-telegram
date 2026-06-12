@@ -73,12 +73,12 @@ function setupTestButton() {
         try {
             const res = await fetch('/api/send-apps-summary', { method: 'POST' });
             if (res.ok) {
-                testBtn.textContent = 'Sent! ✅';
+                testBtn.textContent = 'Sent!';
             } else {
-                testBtn.textContent = 'Failed ❌';
+                testBtn.textContent = 'Failed';
             }
         } catch (error) {
-            testBtn.textContent = 'Error ❌';
+            testBtn.textContent = 'Error';
         }
         
         setTimeout(() => {
@@ -122,7 +122,10 @@ async function fetchApps() {
             const stars = '★'.repeat(Math.round(app.rating)) + '☆'.repeat(5 - Math.round(app.rating));
             
             card.innerHTML = `
-                <h3>${escapeHTML(app.name)}</h3>
+                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px;">
+                    ${app.iconUrl ? `<img src="${app.iconUrl}" alt="${escapeHTML(app.name)} icon" style="width: 56px; height: 56px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">` : ''}
+                    <h3 style="margin: 0;">${escapeHTML(app.name)}</h3>
+                </div>
                 <div class="app-stats">
                     <div class="app-rating">
                         <span class="stars">${stars}</span>

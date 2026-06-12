@@ -13,7 +13,7 @@ const setupListeners = () => {
     if (chatId.toString() !== activeChatId) return;
 
     const { fetchDeveloperApps } = require('./scraper');
-    bot.sendMessage(chatId, '🔄 Fetching apps data...');
+    bot.sendMessage(chatId, 'Fetching apps data...');
     
     try {
       const apps = await fetchDeveloperApps();
@@ -22,13 +22,11 @@ const setupListeners = () => {
         return;
       }
 
-      let text = `📊 *Apps Rating Summary*\n\n`;
+      let text = `*Apps Rating Summary*\n\n`;
       const keyboard = [];
 
       apps.forEach(app => {
-        const stars = app.rating > 0 ? '⭐'.repeat(Math.round(app.rating)) + '☆'.repeat(5 - Math.round(app.rating)) : 'No ratings yet';
-        text += `📱 *${app.name}*\n${stars} (${app.rating} avg from ${app.ratingCount} reviews)\n\n`;
-        
+        text += `*${app.name}*\nRating: ${app.rating.toFixed(1)}/5 (${app.ratingCount} reviews)\n\n`;
         keyboard.push([{ text: `View Reviews: ${app.name}`, callback_data: `app_${app.id}` }]);
       });
 
@@ -56,14 +54,13 @@ const setupListeners = () => {
       dbModule.all('SELECT * FROM reviews WHERE app_id = ? ORDER BY updated_at DESC LIMIT 5', [appId], (err, rows) => {
         if (err || !rows || rows.length === 0) {
           bot.answerCallbackQuery(query.id, { text: 'No reviews found in the local database.' });
-          bot.sendMessage(chatId, 'No reviews found in the local database for this app. They will appear here once new reviews are discovered.');
+          bot.sendMessage(chatId, 'No reviews found in the local database for this app.');
           return;
         }
 
-        let reviewText = `📝 *Latest 5 Reviews:*\n\n`;
+        let reviewText = `*Latest 5 Reviews:*\n\n`;
         rows.forEach(r => {
-          const stars = '⭐'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
-          reviewText += `${stars}\n*${r.title}* by _${r.author_name}_\n${r.content}\n\n`;
+          reviewText += `Rating: ${r.rating}/5\n*${r.title}* by _${r.author_name}_\n${r.content}\n\n`;
         });
 
         bot.answerCallbackQuery(query.id);
@@ -103,23 +100,23 @@ const initBot = async (token, chatId) => {
   }
 };
 
-const sendReviewNotification = async (review, appName) => {
+const sendReviewNotification = async (review, appName, iconUrl) => {
   if (!bot || !activeChatId) return;
 
-  const stars = '⭐'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
-  
-  const message = `
-🔔 *New Review for ${appName}*
+  const message = `*New Review for ${appName}*
 
-${stars}
+Rating: ${review.rating}/5
 *${review.title}*
 by _${review.author_name}_ (v${review.version})
 
-${review.content}
-`;
+${review.content}`;
 
   try {
-    await bot.sendMessage(activeChatId, message, { parse_mode: 'Markdown' });
+    if (iconUrl) {
+      await bot.sendPhoto(activeChatId, iconUrl, { caption: message, parse_mode: 'Markdown' });
+    } else {
+      await bot.sendMessage(activeChatId, message, { parse_mode: 'Markdown' });
+    }
     console.log(`Sent Telegram notification for review ${review.id}`);
   } catch (error) {
     console.error('Error sending Telegram notification:', error);
@@ -129,14 +126,13 @@ ${review.content}
 const sendSummaryMessage = async (apps) => {
   if (!bot || !activeChatId) return false;
 
-  let message = `📊 *Apps Rating Summary*\n\n`;
+  let message = `*Apps Rating Summary*\n\n`;
   
   if (apps.length === 0) {
     message += `No apps found.`;
   } else {
     apps.forEach(app => {
-      const stars = app.rating > 0 ? '⭐'.repeat(Math.round(app.rating)) + '☆'.repeat(5 - Math.round(app.rating)) : 'No ratings yet';
-      message += `📱 *${app.name}*\n${stars} (${app.rating} avg from ${app.ratingCount} reviews)\n\n`;
+      message += `*${app.name}*\nRating: ${app.rating.toFixed(1)}/5 (${app.ratingCount} reviews)\n\n`;
     });
   }
 
