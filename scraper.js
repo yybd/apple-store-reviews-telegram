@@ -95,6 +95,14 @@ async function fetchDeveloperAppsPrivate() {
                     if (!existing.platforms.includes(platformStr)) {
                         existing.platforms.push(platformStr);
                     }
+                    existing.isPublished = true;
+                }
+            });
+            
+            // Mark remaining apps as unpublished
+            appsMap.forEach(app => {
+                if (app.isPublished === undefined) {
+                    app.isPublished = false;
                 }
             });
         }

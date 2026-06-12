@@ -144,21 +144,19 @@ async function fetchApps() {
                 statsHtml = '<div style="color: var(--text-secondary); font-size: 0.9rem;">No ratings yet</div>';
             }
             
-            let platformsHtml = '';
-            if (app.platforms && app.platforms.length > 0) {
-                platformsHtml = `<div style="display: flex; gap: 6px; margin-top: 4px;">`;
-                app.platforms.forEach(p => {
-                    const bgColor = p === 'Mac' ? 'var(--primary-color)' : '#60a5fa';
-                    platformsHtml += `<span style="background: ${bgColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 500;">${escapeHTML(p)}</span>`;
-                });
-                platformsHtml += `</div>`;
-            }
+            const platformsHtml = app.platforms && app.platforms.length > 0 
+                ? `<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">Platforms: ${app.platforms.join(', ')}</div>` 
+                : '';
+                
+            const unpublishedTag = app.isPublished === false
+                ? `<span style="font-size: 0.7rem; background-color: var(--card-border); color: var(--text-secondary); padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle;">Not in Store</span>`
+                : '';
             
             card.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px;">
                     ${app.iconUrl ? `<img src="${app.iconUrl}" alt="${escapeHTML(app.name)} icon" style="width: 56px; height: 56px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">` : ''}
                     <div>
-                        <h3 style="margin: 0;">${escapeHTML(app.name)}</h3>
+                        <h3 style="margin: 0;">${escapeHTML(app.name)}${unpublishedTag}</h3>
                         ${platformsHtml}
                     </div>
                 </div>
