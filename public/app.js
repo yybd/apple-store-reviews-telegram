@@ -1,9 +1,70 @@
+// Setup Auth and fetch wrapper
+let authHeader = localStorage.getItem('storeReviewsAuth') || null;
+
+async function customFetch(url, options = {}) {
+    const headers = options.headers || {};
+    if (authHeader) {
+        headers['Authorization'] = authHeader;
+    }
+    options.headers = headers;
+    
+    const res = await fetch(url, options);
+    if (res.status === 401) {
+        const modal = document.getElementById('login-modal');
+        if (modal) modal.classList.remove('hidden');
+        throw new Error('Authentication required');
+    }
+    return res;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     fetchConfig();
     fetchApps();
     setupTestButton();
     setupSettingsModal();
     setupReviewsModal();
+    
+    // Handle Login UI
+    const loginBtn = document.getElementById('login-btn');
+    const loginError = document.getElementById('login-error');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', async () => {
+            const user = document.getElementById('login-user').value.trim();
+            const pass = document.getElementById('login-pass').value.trim();
+            if (!user || !pass) {
+                loginError.textContent = 'Please enter both username and password';
+                return;
+            }
+            
+            loginBtn.textContent = 'Logging in...';
+            const encoded = btoa(user + ':' + pass);
+            const tempAuth = 'Basic ' + encoded;
+            
+            try {
+                // Test auth by hitting config
+                const res = await fetch('/api/config', {
+                    headers: { 'Authorization': tempAuth }
+                });
+                if (res.status === 401) {
+                    throw new Error('Invalid credentials');
+                }
+                
+                // Success
+                authHeader = tempAuth;
+                localStorage.setItem('storeReviewsAuth', tempAuth);
+                document.getElementById('login-modal').classList.add('hidden');
+                loginError.textContent = '';
+                
+                // Reload data
+                fetchConfig();
+                fetchApps();
+            } catch (e) {
+                loginError.textContent = 'Invalid username or password';
+            } finally {
+                loginBtn.textContent = 'Login';
+            }
+        });
+    }
 });
 
 async function fetchConfig() {
@@ -377,68 +438,6 @@ function setupSettingsModal() {
 
     let currentApiMode = 'public';
 
-// Setup Auth and fetch wrapper
-let authHeader = localStorage.getItem('storeReviewsAuth') || null;
-
-async function customFetch(url, options = {}) {
-    const headers = options.headers || {};
-    if (authHeader) {
-        headers['Authorization'] = authHeader;
-    }
-    options.headers = headers;
-    
-    const res = await fetch(url, options);
-    if (res.status === 401) {
-        const modal = document.getElementById('login-modal');
-        if (modal) modal.classList.remove('hidden');
-        throw new Error('Authentication required');
-    }
-    return res;
-}
-
-// Handle Login UI
-document.addEventListener('DOMContentLoaded', () => {
-    const loginBtn = document.getElementById('login-btn');
-    const loginError = document.getElementById('login-error');
-    if (loginBtn) {
-        loginBtn.addEventListener('click', async () => {
-            const user = document.getElementById('login-user').value.trim();
-            const pass = document.getElementById('login-pass').value.trim();
-            if (!user || !pass) {
-                loginError.textContent = 'Please enter both username and password';
-                return;
-            }
-            
-            loginBtn.textContent = 'Logging in...';
-            const encoded = btoa(user + ':' + pass);
-            const tempAuth = 'Basic ' + encoded;
-            
-            try {
-                // Test auth by hitting config
-                const res = await fetch('/api/config', {
-                    headers: { 'Authorization': tempAuth }
-                });
-                if (res.status === 401) {
-                    throw new Error('Invalid credentials');
-                }
-                
-                // Success
-                authHeader = tempAuth;
-                localStorage.setItem('storeReviewsAuth', tempAuth);
-                document.getElementById('login-modal').classList.add('hidden');
-                loginError.textContent = '';
-                
-                // Reload data
-                fetchConfig();
-                fetchApps();
-            } catch (e) {
-                loginError.textContent = 'Invalid username or password';
-            } finally {
-                loginBtn.textContent = 'Login';
-            }
-        });
-    }
-});
 
     settingsBtn.addEventListener('click', async () => {
         if (statusEl) {
