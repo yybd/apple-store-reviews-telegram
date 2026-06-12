@@ -269,7 +269,7 @@ async function openReviewsModal(appId, appName) {
     modal.classList.remove('hidden');
     
     try {
-        const response = await fetch(`/api/reviews?appId=${appId}`, { cache: 'no-cache' });
+        const response = await customFetch(`/api/reviews?appId=${appId}`, { cache: 'no-cache' });
         if (!response.ok) throw new Error('Failed to fetch reviews');
         
         const reviews = await response.json();
