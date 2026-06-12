@@ -7,6 +7,29 @@ const { initBot, isBotConnected } = require('./telegram');
 
 const app = express();
 app.use(express.json());
+
+// Basic Auth Middleware
+const basicAuth = (req, res, next) => {
+  const user = process.env.DASHBOARD_USER;
+  const pass = process.env.DASHBOARD_PASS;
+  
+  if (!user || !pass) {
+    return next();
+  }
+
+  const b64auth = (req.headers.authorization || '').split(' ')[1] || '';
+  const [login, password] = Buffer.from(b64auth, 'base64').toString().split(':');
+
+  if (login && password && login === user && password === pass) {
+    return next();
+  }
+
+  res.set('WWW-Authenticate', 'Basic realm="Store Reviews Dashboard"');
+  res.status(401).send('Authentication required. Please enter your configured username and password.');
+};
+
+app.use(basicAuth);
+
 const PORT = process.env.PORT || 3000;
 const POLL_INTERVAL_MINUTES = parseInt(process.env.POLL_INTERVAL_MINUTES || '15', 10);
 
